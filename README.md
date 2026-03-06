@@ -94,7 +94,7 @@ serverless remove
 ## Prueba rapida con curl
 
 ```bash
-curl -X POST "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/agente-ia-generica" \
+curl -X POST "https://<api-id>.execute-api.us-east-1.amazonaws.com/agente-ia-generica" \
   -H "Content-Type: application/json" \
   -d '{
     "instructions_s3_link": "s3://mi-bucket/instrucciones.md",
@@ -147,4 +147,5 @@ Crea un api genérica Agente de IA con estas funcionalidades:
 ## Elementos adicionales
 -
 ```
+
 

@@ -1,6 +1,6 @@
 # agente-ia-generica
 
-API generica de Agente de IA 100% serverless en AWS para evaluar contenido markdown usando instrucciones markdown almacenadas en S3 y procesadas con Groq.
+API generica de Agente de IA 100% serverless en AWS para evaluar contenido markdown usando instrucciones markdown almacenadas en S3 y procesadas con Groq, devolviendo salida JSON.
 
 ## Funcionalidades
 
@@ -13,7 +13,7 @@ API generica de Agente de IA 100% serverless en AWS para evaluar contenido markd
   - URL S3 `https://...amazonaws.com/...`
 - Construir un prompt unificado con instrucciones + contenido.
 - Invocar Groq con modelo `llama-3.3-70b-versatile`.
-- Retornar la salida de Groq directamente en `text/markdown`.
+- Retornar la salida de Groq en `application/json`.
 
 ## Arquitectura
 
@@ -51,8 +51,8 @@ API generica de Agente de IA 100% serverless en AWS para evaluar contenido markd
 ### Respuesta exitosa
 
 - HTTP `200`
-- Content-Type: `text/markdown; charset=utf-8`
-- Body: markdown devuelto por Groq
+- Content-Type: `application/json; charset=utf-8`
+- Body: JSON devuelto por Groq
 
 ### Respuestas de error
 
@@ -97,7 +97,7 @@ export GROQ_API_KEY="tu_api_key_de_groq"
 5. Despliega automaticamente:
 
 ```bash
-serverless deploy --stage dev --region us-east-1
+serverless deploy
 ```
 
 6. Consulta la URL desplegada:
@@ -109,7 +109,7 @@ serverless info --verbose
 7. (Opcional) Eliminar recursos:
 
 ```bash
-serverless remove --stage dev --region us-east-1
+serverless remove
 ```
 
 ## Prueba rapida con curl

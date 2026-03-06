@@ -21,7 +21,7 @@ functions:
     name: ${self:service}-${sls:stage}
     description: API serverless generica para evaluar markdown con Groq.
     handler: handler.lambda_handler
-    timeout: 60
+    timeout: 30
     memorySize: 512
     events:
       - httpApi:

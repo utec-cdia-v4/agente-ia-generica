@@ -15,19 +15,11 @@ DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 s3_client = boto3.client("s3")
 
 
-def json_response(status_code: int, payload: Dict[str, Any]) -> Dict[str, Any]:
+def json_response(status_code: int, payload: Any) -> Dict[str, Any]:
     return {
         "statusCode": status_code,
         "headers": {"Content-Type": "application/json; charset=utf-8"},
         "body": json.dumps(payload, ensure_ascii=False),
-    }
-
-
-def markdown_response(status_code: int, markdown_text: str) -> Dict[str, Any]:
-    return {
-        "statusCode": status_code,
-        "headers": {"Content-Type": "text/markdown; charset=utf-8"},
-        "body": markdown_text,
     }
 
 
@@ -135,7 +127,8 @@ def read_markdown_from_link(link: str) -> str:
 
 def build_prompt(instructions_markdown: str, content_markdown: str) -> str:
     return (
-        "Evalua el contenido segun las instrucciones dadas y responde solo en markdown.\n\n"
+        "Evalua el contenido segun las instrucciones dadas."
+        " La respuesta final debe ser JSON valido.\n\n"
         "## Instrucciones\n"
         f"{instructions_markdown.strip()}\n\n"
         "## Contenido a evaluar\n"
@@ -143,7 +136,25 @@ def build_prompt(instructions_markdown: str, content_markdown: str) -> str:
     )
 
 
-def call_groq(prompt_text: str) -> str:
+def parse_model_json_content(content: str) -> Any:
+    candidate = content.strip()
+
+    # Accept JSON wrapped in a fenced block to be robust with model outputs.
+    if candidate.startswith("```"):
+        lines = candidate.splitlines()
+        if len(lines) >= 3 and lines[0].startswith("```") and lines[-1].strip() == "```":
+            candidate = "\n".join(lines[1:-1]).strip()
+
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(
+            "La respuesta de Groq no es JSON valido. "
+            "Verifica que las instrucciones fuercen salida estrictamente en JSON."
+        ) from error
+
+
+def call_groq(prompt_text: str) -> Any:
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("La variable de entorno GROQ_API_KEY no esta configurada.")
@@ -156,7 +167,8 @@ def call_groq(prompt_text: str) -> str:
                 "role": "system",
                 "content": (
                     "Eres un asistente de evaluacion de contenido. "
-                    "Debes responder exclusivamente en formato markdown."
+                    "Debes responder exclusivamente con JSON valido, "
+                    "sin texto adicional ni markdown."
                 ),
             },
             {"role": "user", "content": prompt_text},
@@ -195,9 +207,9 @@ def call_groq(prompt_text: str) -> str:
 
     content = choices[0].get("message", {}).get("content")
     if not content:
-        raise RuntimeError("La respuesta de Groq no contiene contenido en markdown.")
+        raise RuntimeError("La respuesta de Groq no contiene contenido JSON.")
 
-    return content
+    return parse_model_json_content(content)
 
 
 def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
@@ -222,11 +234,11 @@ def lambda_handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     prompt_text = build_prompt(instructions_markdown, content_markdown)
 
     try:
-        groq_markdown = call_groq(prompt_text)
+        groq_json = call_groq(prompt_text)
     except RuntimeError as error:
         return json_response(
             502,
             {"error": "Fallo al invocar el API de Groq.", "detail": str(error)},
         )
 
-    return markdown_response(200, groq_markdown)
+    return json_response(200, groq_json)
